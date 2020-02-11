@@ -1,27 +1,3 @@
-# hotpot-db
-
-<img width="500px" src="https://66.media.tumblr.com/dc1e0c3d4372dd7a763cb3abba5c07b4/tumblr_ogk0t7i51o1vj3zbeo1_500.gifv"/>
-
-### The 🌶🌶🌶 hottest way to store data
-
-hotpot-db is a spicy, incredibly easy to use, and delcious database system.
-
-```bash
-# COMING SOON!
-# hotpot_db = "0.0.0"
-```
-
-## What in the pot?
-
-1. schemaless
-2. reliable (uses SQLite3)
-3. embeddable
-4. fast
-5. JSON store
-6. queryable JSON schemas 
-
-
-```rust
 use hotpot_db::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -119,4 +95,3 @@ fn main() -> Result<(), hotpot_db::Error> {
 
     Ok(())
 }
-```

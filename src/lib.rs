@@ -30,6 +30,95 @@ pub enum Error {
     General,
 }
 
+#[derive(Debug, Clone)]
+pub enum QueryKind {
+    Contains,
+    Object,
+}
+
+#[derive(Debug)]
+pub struct Query {
+    pub query_type: QueryKind,
+    pub collection: String,
+    pub key: Option<String>,
+    pub string_value: Option<String>,
+    pub bool_value: Option<bool>,
+    pub float_value: Option<f32>,
+    pub int_value: Option<i32>,
+}
+
+#[derive(Debug)]
+pub struct QueryBuilder {
+    pub query_type: Option<QueryKind>,
+    pub collection: Option<String>,
+    pub key: Option<String>,
+    pub string_value: Option<String>,
+    pub bool_value: Option<bool>,
+    pub float_value: Option<f32>,
+    pub int_value: Option<i32>,
+}
+
+impl QueryBuilder {
+    pub fn new() -> QueryBuilder {
+        QueryBuilder {
+            query_type: None,
+            collection: None,
+            key: None,
+            string_value: None,
+            bool_value: None,
+            float_value: None,
+            int_value: None,
+        }
+    }
+
+    pub fn kind(mut self, typ: QueryKind) -> QueryBuilder {
+        self.query_type = Some(typ);
+        self
+    }
+
+    pub fn collection(mut self, collection: &str) -> QueryBuilder {
+        self.collection = Some(String::from(collection));
+        self
+    }
+
+    pub fn string(mut self, value: &str) -> QueryBuilder {
+        self.string_value = Some(String::from(value));
+        self
+    }
+
+    pub fn bool(mut self, value: bool) -> QueryBuilder {
+        self.bool_value = Some(value.clone());
+        self
+    }
+
+    pub fn float(mut self, value: f32) -> QueryBuilder {
+        self.float_value = Some(value.clone());
+        self
+    }
+
+    pub fn int(mut self, value: i32) -> QueryBuilder {
+        self.int_value = Some(value.clone());
+        self
+    }
+
+    pub fn key(mut self, key: &str) -> QueryBuilder {
+        self.key = Some(String::from(key));
+        self
+    }
+
+    pub fn finish(self) -> Query {
+        Query {
+            query_type: self.query_type.unwrap(),
+            collection: self.collection.unwrap(),
+            key: self.key,
+            string_value: self.string_value,
+            bool_value: self.bool_value,
+            float_value: self.float_value,
+            int_value: self.int_value,
+        }
+    }
+}
+
 impl HotPot {
     pub fn new() -> HotPot {
         let mut hp = HotPot {
@@ -90,6 +179,99 @@ impl HotPot {
         Ok(true)
     }
 
+    pub fn execute(&self, query: Query) -> Result<Vec<Entry>, Error> {
+        // pub fn execute(&self, query: Query) {
+        let mut results = Vec::new();
+        let c = &self
+            .collections
+            .get(&query.collection)
+            .expect("collection does not exist");
+        match query.query_type {
+            QueryKind::Contains => {
+                if !query.string_value.is_none() {
+                    results = c
+                        .query_arrays_contain_string(
+                            &self.conn,
+                            &query.collection,
+                            &query.string_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.int_value.is_none() {
+                    results = c
+                        .query_arrays_contain_int(
+                            &self.conn,
+                            &query.collection,
+                            &query.int_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.bool_value.is_none() {
+                    results = c
+                        .query_arrays_contain_bool(
+                            &self.conn,
+                            &query.collection,
+                            &query.bool_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.float_value.is_none() {
+                    results = c
+                        .query_arrays_contain_float(
+                            &self.conn,
+                            &query.collection,
+                            &query.float_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+            }
+            QueryKind::Object => {
+                if !query.string_value.is_none() {
+                    results = c
+                        .query_object_with_key_value_string(
+                            &self.conn,
+                            &query.collection,
+                            &query.key.clone().unwrap(),
+                            &query.string_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.int_value.is_none() {
+                    results = c
+                        .query_object_with_key_value_int(
+                            &self.conn,
+                            &query.collection,
+                            &query.key.clone().unwrap(),
+                            &query.int_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.bool_value.is_none() {
+                    results = c
+                        .query_object_with_key_value_bool(
+                            &self.conn,
+                            &query.collection,
+                            &query.key.clone().unwrap(),
+                            &query.bool_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+                if !query.float_value.is_none() {
+                    // println!("{:?}", &query.float_value);
+                    results = c
+                        .query_object_with_key_value_float(
+                            &self.conn,
+                            &query.collection,
+                            &query.key.clone().unwrap(),
+                            &query.float_value.unwrap(),
+                        )
+                        .unwrap_or(Vec::new());
+                }
+            }
+        }
+        Ok(results)
+    }
+
     pub fn add_object_to_collection(&mut self, cname: &str, val: String) -> Result<bool, Error> {
         let c = &self.collections.get(cname).unwrap();
         let _did_insert = c.add_object(&self.conn, cname, val);
@@ -103,7 +285,7 @@ impl HotPot {
     ) -> Result<Vec<Entry>, Error> {
         let c = &self.collections.get(cname).unwrap();
         let results = c
-            .query_arrays_contain(&self.conn, cname, val)
+            .query_arrays_contain_string(&self.conn, cname, val)
             .unwrap_or(Vec::new());
         Ok(results)
     }
@@ -116,7 +298,7 @@ impl HotPot {
     ) -> Result<Vec<Entry>, Error> {
         let c = &self.collections.get(cname).unwrap();
         let results = c
-            .query_object_with_key_value(&self.conn, cname, key, val)
+            .query_object_with_key_value_string(&self.conn, cname, key, val)
             .unwrap_or(Vec::new());
         Ok(results)
     }
@@ -144,7 +326,7 @@ impl Collection {
         Ok(())
     }
 
-    pub fn query_arrays_contain(
+    pub fn query_arrays_contain_string(
         &self,
         conn: &Connection,
         cname: &str,
@@ -165,8 +347,71 @@ impl Collection {
         let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
         Ok(results)
     }
+    pub fn query_arrays_contain_bool(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        value: &bool,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let mut stmt = conn.prepare(&format!(
+            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
+            cname, value
+        ))?;
 
-    pub fn query_object_with_key_value(
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+    pub fn query_arrays_contain_int(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        value: &i32,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let mut stmt = conn.prepare(&format!(
+            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
+            cname, value
+        ))?;
+
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+    pub fn query_arrays_contain_float(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        value: &f32,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let mut stmt = conn.prepare(&format!(
+            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
+            cname, value
+        ))?;
+
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+
+    pub fn query_object_with_key_value_string(
         &self,
         conn: &Connection,
         cname: &str,
@@ -175,6 +420,76 @@ impl Collection {
     ) -> rusqlite::Result<Vec<Entry>> {
         let query = format!(
             "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = '{}'",
+            cname, key, value
+        );
+        // println!("{}", query);
+        let mut stmt = conn.prepare(&query)?;
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+
+    pub fn query_object_with_key_value_int(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        key: &str,
+        value: &i32,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let query = format!(
+            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
+            cname, key, value
+        );
+        // println!("{}", query);
+        let mut stmt = conn.prepare(&query)?;
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+    pub fn query_object_with_key_value_bool(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        key: &str,
+        value: &bool,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let query = format!(
+            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
+            cname, key, value
+        );
+        // println!("{}", query);
+        let mut stmt = conn.prepare(&query)?;
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
+    }
+    pub fn query_object_with_key_value_float(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        key: &str,
+        value: &f32,
+    ) -> rusqlite::Result<Vec<Entry>> {
+        let query = format!(
+            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
             cname, key, value
         );
         // println!("{}", query);
