@@ -11,7 +11,7 @@ _Warning: API is not finished and may be subject to change. New features and doc
 hotpot-db is a spicy, incredibly easy to use, and delcious database system.
 
 ```bash
-hotpot_db = "0.0.1"
+hotpot_db = "0.0.2"
 ```
 
 ## Flavor Palette
