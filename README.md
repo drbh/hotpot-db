@@ -4,7 +4,7 @@
 
 _Warning: API is not finished and may be subject to change. New features and documentation will be added before 1.0 stable release_
 
-<img width="500px" src="https://66.media.tumblr.com/dc1e0c3d4372dd7a763cb3abba5c07b4/tumblr_ogk0t7i51o1vj3zbeo1_500.gifv"/>
+<img width="500px" src="https://66.media.tumblr.com/dc1e0c3d4372dd7a763cb3abba5c07b4/tumblr_ogk0t7i51o1vj3zbeo1_500.gif"/>
 
 ### The 🌶🌶🌶 hottest way to store data
 
