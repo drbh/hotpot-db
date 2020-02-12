@@ -64,6 +64,28 @@ pub struct QueryBuilder {
     pub int_value: Option<i32>,
 }
 
+#[derive(Debug)]
+pub struct Index {
+    pub collection: String,
+    pub key: String,
+    pub value: String,
+    // sqlite> insert into a values (1, '{"hello":"world"}');
+    // sqlite> create index idx_a on a (json_extract(j, '$.hello'));
+    // sqlite> explain query plan select * from a where json_extract(j, '$.hello') = 'world';
+    // QUERY PLAN
+    // `--SEARCH TABLE a USING INDEX idx_a (<expr>=?)
+    // sqlite> explain query plan select * from a where json_extract(j, '$.foo') = 'world';
+    // QUERY PLAN
+    // `--SCAN TABLE a
+}
+
+#[derive(Debug)]
+pub struct IndexBuilder {
+    pub collection: Option<String>,
+    pub key: Option<String>,
+    pub value: Option<String>,
+}
+
 fn get_ms_time() -> i64 {
     let start = SystemTime::now();
     let since_the_epoch = start

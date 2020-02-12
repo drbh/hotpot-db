@@ -1,3 +1,4 @@
 /target
 **/*.rs.bk
 database.hpdb
+/examples/store_index_query.rs

@@ -31,14 +31,8 @@ fn main() -> Result<(), hotpot_db::Error> {
         .string("david holtz")
         .finish();
 
-    use std::time::Instant;
-    let now = Instant::now();
-
     let results = pot.execute(query);
     println!("{:#?}", results);
-
-    let elapsed = now.elapsed();
-    println!("Elapsed: {:#?}", elapsed);
 
     Ok(())
 }
