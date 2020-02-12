@@ -5,7 +5,7 @@ use serde_json::json;
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
     name: String,
-    age: u8,
+    age: u32,
 }
 
 #[derive(Serialize, Deserialize)]
