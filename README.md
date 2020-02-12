@@ -1,5 +1,7 @@
 # hotpot-db
 
+[![crates.io](https://meritbadge.herokuapp.com/hotpot-db)](https://crates.io/crates/hotpot-db)
+
 <img width="500px" src="https://66.media.tumblr.com/dc1e0c3d4372dd7a763cb3abba5c07b4/tumblr_ogk0t7i51o1vj3zbeo1_500.gifv"/>
 
 ### The 🌶🌶🌶 hottest way to store data
