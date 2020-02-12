@@ -2,3 +2,5 @@
 **/*.rs.bk
 database.hpdb
 /examples/store_index_query.rs
+/examples/wine_search_engine.rs
+/examples/read_wine_search_engine.rs

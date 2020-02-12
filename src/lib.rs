@@ -11,7 +11,7 @@ pub struct HotPot {
     pub collections: HashMap<String, Collection>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Collection {
     pub name: String,
 }
@@ -22,7 +22,7 @@ pub struct NewEntry {
     data: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entry {
     pub id: i64,
     pub time_created: i64,
@@ -40,7 +40,7 @@ pub enum QueryKind {
     Object,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Query {
     pub query_type: QueryKind,
     pub collection: String,
@@ -69,6 +69,8 @@ pub struct Index {
     pub collection: String,
     pub key: String,
     pub value: String,
+    // create index wr_country on wine_reviews (json_extract(data, '$.country'));
+    //
     // sqlite> insert into a values (1, '{"hello":"world"}');
     // sqlite> create index idx_a on a (json_extract(j, '$.hello'));
     // sqlite> explain query plan select * from a where json_extract(j, '$.hello') = 'world';
@@ -332,6 +334,16 @@ impl HotPot {
         let _did_insert = c.add_object(&self.conn, cname, val);
         Ok(true)
     }
+    pub fn add_index_to_collection(
+        &mut self,
+        collection_name: &str,
+        key: &str,
+        index_name: &str,
+    ) -> Result<bool, Error> {
+        let c = &self.collections.get(collection_name).unwrap();
+        let _did_insert = c.add_index(&self.conn, collection_name, key, index_name);
+        Ok(true)
+    }
 
     pub fn insert<T: Serialize>(&mut self, cname: &str, svalue: &T) -> Result<bool, Error> {
         // let json_to_store = serde_json::to_string(&person).unwrap();
@@ -365,6 +377,20 @@ impl Collection {
         Ok(())
     }
 
+    pub fn add_index(
+        &self,
+        conn: &Connection,
+        collection_name: &str,
+        key: &str,
+        index_name: &str,
+    ) -> rusqlite::Result<()> {
+        let mut stmt = conn.prepare(&format!(
+            "CREATE INDEX {} ON {} (json_extract(data, '$.{}'))",
+            index_name, collection_name, key
+        ))?;
+        let res = stmt.execute(params![])?;
+        Ok(())
+    }
     pub fn query_arrays_contains<T: std::fmt::Display>(
         &self,
         conn: &Connection,

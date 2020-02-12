@@ -22,6 +22,9 @@ fn main() -> Result<(), hotpot_db::Error> {
     // we insert the object into the collection!
     pot.insert::<Person>("address_book", &person)?;
 
+    // before we query we can add an index to speed things up
+    pot.add_index_to_collection("address_book", "name", "naming_index")?;
+
     // finally we can query
     let query = QueryBuilder::new()
         .collection("address_book")

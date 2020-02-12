@@ -2,6 +2,8 @@
 
 [![crates.io](https://meritbadge.herokuapp.com/hotpot-db)](https://crates.io/crates/hotpot-db)
 
+_Warning: API is not finished and may be subject to change. New features and documentation will be added before 1.0 stable release_
+
 <img width="500px" src="https://66.media.tumblr.com/dc1e0c3d4372dd7a763cb3abba5c07b4/tumblr_ogk0t7i51o1vj3zbeo1_500.gifv"/>
 
 ### The 🌶🌶🌶 hottest way to store data
@@ -48,6 +50,9 @@ fn main() -> Result<(), hotpot_db::Error> {
     // we insert the object into the collection!
     pot.insert::<Person>("address_book", &person)?;
 
+    // before we query we can add an index to speed things up
+    pot.add_index_to_collection("address_book", "name", "naming_index")?;
+
     // finally we can query
     let query = QueryBuilder::new()
         .collection("address_book")
@@ -80,7 +85,7 @@ In a technical sense a collection is just a table in SQLite, that stores data in
 
 In theory a collection should house similar data to make it easier to manage, but hotpt-db doesnt care about schema so you can store any kind of object in a single collection.
 
-### Objects
+#### Objects
 
 Each entry contains an object and the are the heart of hotpot-db. Objects are special because you can query their conents effeicently. 
 
