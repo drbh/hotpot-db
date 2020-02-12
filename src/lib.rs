@@ -1,5 +1,7 @@
 use rusqlite::{params, Connection, NO_PARAMS};
+use std::any::type_name;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct HotPot {
@@ -40,6 +42,7 @@ pub enum QueryKind {
 pub struct Query {
     pub query_type: QueryKind,
     pub collection: String,
+    pub comparison: String,
     pub key: Option<String>,
     pub string_value: Option<String>,
     pub bool_value: Option<bool>,
@@ -51,6 +54,7 @@ pub struct Query {
 pub struct QueryBuilder {
     pub query_type: Option<QueryKind>,
     pub collection: Option<String>,
+    pub comparison: Option<String>,
     pub key: Option<String>,
     pub string_value: Option<String>,
     pub bool_value: Option<bool>,
@@ -58,11 +62,24 @@ pub struct QueryBuilder {
     pub int_value: Option<i32>,
 }
 
+fn get_ms_time() -> i64 {
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    since_the_epoch.as_millis() as i64
+}
+
+fn type_of<T>(_: T) -> &'static str {
+    type_name::<T>()
+}
+
 impl QueryBuilder {
     pub fn new() -> QueryBuilder {
         QueryBuilder {
             query_type: None,
             collection: None,
+            comparison: None,
             key: None,
             string_value: None,
             bool_value: None,
@@ -78,6 +95,11 @@ impl QueryBuilder {
 
     pub fn collection(mut self, collection: &str) -> QueryBuilder {
         self.collection = Some(String::from(collection));
+        self
+    }
+
+    pub fn comparison(mut self, comparison: &str) -> QueryBuilder {
+        self.comparison = Some(String::from(comparison));
         self
     }
 
@@ -110,6 +132,7 @@ impl QueryBuilder {
         Query {
             query_type: self.query_type.unwrap(),
             collection: self.collection.unwrap(),
+            comparison: self.comparison.unwrap(),
             key: self.key,
             string_value: self.string_value,
             bool_value: self.bool_value,
@@ -190,36 +213,40 @@ impl HotPot {
             QueryKind::Contains => {
                 if !query.string_value.is_none() {
                     results = c
-                        .query_arrays_contain_string(
+                        .query_arrays_contains::<String>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.string_value.unwrap(),
                         )
                         .unwrap_or(Vec::new());
                 }
                 if !query.int_value.is_none() {
                     results = c
-                        .query_arrays_contain_int(
+                        .query_arrays_contains::<i32>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.int_value.unwrap(),
                         )
                         .unwrap_or(Vec::new());
                 }
                 if !query.bool_value.is_none() {
                     results = c
-                        .query_arrays_contain_bool(
+                        .query_arrays_contains::<bool>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.bool_value.unwrap(),
                         )
                         .unwrap_or(Vec::new());
                 }
                 if !query.float_value.is_none() {
                     results = c
-                        .query_arrays_contain_float(
+                        .query_arrays_contains::<f32>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.float_value.unwrap(),
                         )
                         .unwrap_or(Vec::new());
@@ -228,9 +255,10 @@ impl HotPot {
             QueryKind::Object => {
                 if !query.string_value.is_none() {
                     results = c
-                        .query_object_with_key_value_string(
+                        .query_object_with_key_value::<String>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.key.clone().unwrap(),
                             &query.string_value.unwrap(),
                         )
@@ -238,9 +266,10 @@ impl HotPot {
                 }
                 if !query.int_value.is_none() {
                     results = c
-                        .query_object_with_key_value_int(
+                        .query_object_with_key_value::<i32>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.key.clone().unwrap(),
                             &query.int_value.unwrap(),
                         )
@@ -248,9 +277,10 @@ impl HotPot {
                 }
                 if !query.bool_value.is_none() {
                     results = c
-                        .query_object_with_key_value_bool(
+                        .query_object_with_key_value::<bool>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.key.clone().unwrap(),
                             &query.bool_value.unwrap(),
                         )
@@ -259,9 +289,10 @@ impl HotPot {
                 if !query.float_value.is_none() {
                     // println!("{:?}", &query.float_value);
                     results = c
-                        .query_object_with_key_value_float(
+                        .query_object_with_key_value::<f32>(
                             &self.conn,
                             &query.collection,
+                            &query.comparison,
                             &query.key.clone().unwrap(),
                             &query.float_value.unwrap(),
                         )
@@ -276,31 +307,6 @@ impl HotPot {
         let c = &self.collections.get(cname).unwrap();
         let _did_insert = c.add_object(&self.conn, cname, val);
         Ok(true)
-    }
-
-    pub fn get_objects_from_collection_containing(
-        &mut self,
-        cname: &str,
-        val: &str,
-    ) -> Result<Vec<Entry>, Error> {
-        let c = &self.collections.get(cname).unwrap();
-        let results = c
-            .query_arrays_contain_string(&self.conn, cname, val)
-            .unwrap_or(Vec::new());
-        Ok(results)
-    }
-
-    pub fn get_objects_from_collection_key_value(
-        &mut self,
-        cname: &str,
-        key: &str,
-        val: &str,
-    ) -> Result<Vec<Entry>, Error> {
-        let c = &self.collections.get(cname).unwrap();
-        let results = c
-            .query_object_with_key_value_string(&self.conn, cname, key, val)
-            .unwrap_or(Vec::new());
-        Ok(results)
     }
 }
 
@@ -326,192 +332,92 @@ impl Collection {
         Ok(())
     }
 
-    pub fn query_arrays_contain_string(
+    pub fn query_arrays_contains<T: std::fmt::Display>(
         &self,
         conn: &Connection,
         cname: &str,
-        value: &str,
+        comparison: &str,
+        value: &T,
     ) -> rusqlite::Result<Vec<Entry>> {
-        let mut stmt = conn.prepare(&format!(
-            "SELECT * from {}, json_each(data) WHERE json_each.value = '{}'",
-            cname, value
-        ))?;
+        match type_of(value) {
+            "&alloc::string::String" => {
+                let mut stmt = conn.prepare(&format!(
+                    "SELECT * from {}, json_each(data) WHERE json_each.value {} '{}'",
+                    cname, comparison, value
+                ))?;
 
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-    pub fn query_arrays_contain_bool(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        value: &bool,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let mut stmt = conn.prepare(&format!(
-            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
-            cname, value
-        ))?;
+                let person_iter = stmt.query_map(params![], |row| {
+                    Ok(Entry {
+                        id: row.get(0).unwrap(),
+                        time_created: row.get(1).unwrap(),
+                        data: row.get(2).unwrap(),
+                    })
+                })?;
+                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+                Ok(results)
+            }
+            _ => {
+                let mut stmt = conn.prepare(&format!(
+                    "SELECT * from {}, json_each(data) WHERE json_each.value {} {}",
+                    cname, comparison, value
+                ))?;
 
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-    pub fn query_arrays_contain_int(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        value: &i32,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let mut stmt = conn.prepare(&format!(
-            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
-            cname, value
-        ))?;
-
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-    pub fn query_arrays_contain_float(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        value: &f32,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let mut stmt = conn.prepare(&format!(
-            "SELECT * from {}, json_each(data) WHERE json_each.value = {}",
-            cname, value
-        ))?;
-
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
+                let person_iter = stmt.query_map(params![], |row| {
+                    Ok(Entry {
+                        id: row.get(0).unwrap(),
+                        time_created: row.get(1).unwrap(),
+                        data: row.get(2).unwrap(),
+                    })
+                })?;
+                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+                Ok(results)
+            }
+        }
     }
 
-    pub fn query_object_with_key_value_string(
+    pub fn query_object_with_key_value<T: std::fmt::Display>(
         &self,
         conn: &Connection,
         cname: &str,
+        comparison: &str,
         key: &str,
-        value: &str,
+        value: &T,
     ) -> rusqlite::Result<Vec<Entry>> {
-        let query = format!(
-            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = '{}'",
-            cname, key, value
-        );
-        // println!("{}", query);
-        let mut stmt = conn.prepare(&query)?;
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
+        match type_of(value) {
+            "&alloc::string::String" => {
+                let query = format!(
+                    "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} '{}'",
+                    cname, key, comparison, value
+                );
+                // println!("{}", query);
+                let mut stmt = conn.prepare(&query)?;
+                let person_iter = stmt.query_map(params![], |row| {
+                    Ok(Entry {
+                        id: row.get(0).unwrap(),
+                        time_created: row.get(1).unwrap(),
+                        data: row.get(2).unwrap(),
+                    })
+                })?;
+                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+                Ok(results)
+            }
+            _ => {
+                let query = format!(
+                    "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} {}",
+                    cname, key, comparison, value
+                );
+                // println!("{}", query);
+                let mut stmt = conn.prepare(&query)?;
+                let person_iter = stmt.query_map(params![], |row| {
+                    Ok(Entry {
+                        id: row.get(0).unwrap(),
+                        time_created: row.get(1).unwrap(),
+                        data: row.get(2).unwrap(),
+                    })
+                })?;
+                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+                Ok(results)
+            }
+        }
     }
-
-    pub fn query_object_with_key_value_int(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        key: &str,
-        value: &i32,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let query = format!(
-            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
-            cname, key, value
-        );
-        // println!("{}", query);
-        let mut stmt = conn.prepare(&query)?;
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-    pub fn query_object_with_key_value_bool(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        key: &str,
-        value: &bool,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let query = format!(
-            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
-            cname, key, value
-        );
-        // println!("{}", query);
-        let mut stmt = conn.prepare(&query)?;
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-    pub fn query_object_with_key_value_float(
-        &self,
-        conn: &Connection,
-        cname: &str,
-        key: &str,
-        value: &f32,
-    ) -> rusqlite::Result<Vec<Entry>> {
-        let query = format!(
-            "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value = {}",
-            cname, key, value
-        );
-        // println!("{}", query);
-        let mut stmt = conn.prepare(&query)?;
-        let person_iter = stmt.query_map(params![], |row| {
-            Ok(Entry {
-                id: row.get(0).unwrap(),
-                time_created: row.get(1).unwrap(),
-                data: row.get(2).unwrap(),
-            })
-        })?;
-        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-        Ok(results)
-    }
-}
-
-use std::time::{SystemTime, UNIX_EPOCH};
-
-fn get_ms_time() -> i64 {
-    let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    since_the_epoch.as_millis() as i64
 }
