@@ -8,6 +8,7 @@ keywords = ["database", "storage", "sqlite", "nosql", "json"]
 homepage = "https://github.com/drbh/hotpot-db"
 repository = "https://github.com/drbh/hotpot-db.git"
 readme = "README.md"
+license = ["MIT"]
 
 [dependencies]
 # rusqlite = "0.21.0"
