@@ -46,7 +46,7 @@ fn main() -> Result<(), hotpot_db::Error> {
 
     // we can add complex structs that are nested
     let grade = Grade {
-        assignment: String::from("First Test"),
+        assignment: String::from("homework 1"),
         score: 90.25,
         person: Person {
             name: String::from("drbh"),
@@ -58,7 +58,7 @@ fn main() -> Result<(), hotpot_db::Error> {
 
     // well add a second one
     let grade = Grade {
-        assignment: String::from("First Test"),
+        assignment: String::from("class trip 2"),
         score: 290.25,
         person: Person {
             name: String::from("drbh"),
@@ -77,6 +77,9 @@ fn main() -> Result<(), hotpot_db::Error> {
         .float(90.25)
         .finish();
 
+    let results = pot.execute(query)?;
+    println!("{:#?}", results);
+    
     Ok(())
 }
 
