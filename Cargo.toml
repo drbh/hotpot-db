@@ -1,6 +1,6 @@
 [package]
 name = "hotpot-db"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["David Holtz <david.richard.holtz@gmail.com>"]
 edition = "2018"
 description = "🌶 hottest way to store data on the web. If you like JSON and dealing with things later"
