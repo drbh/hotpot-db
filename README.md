@@ -8,7 +8,7 @@ _Warning: API is not finished and may be subject to change. New features and doc
 
 ### The 🌶🌶🌶 hottest way to store data
 
-hotpot-db is a spicy, incredibly easy to use, and delcious database system.
+hotpot-db is a spicy, incredibly easy to use, and delicious database system.
 
 ```bash
 hotpot_db = "0.0.2"
@@ -71,9 +71,9 @@ fn main() -> Result<(), hotpot_db::Error> {
 
 ## Recipe
 
-hotpot-db is made from few, but time tasted ingredients. It is a new approach on an old dish. 
+hotpot-db is made from few, but time tasted ingredients. It is a new approach to an old dish. 
 
-**Ingredeients**
+**Ingredients**
 1. 1 cup, `SQLite 3.30.1`
 2. 2 tablespoons, `Rust`
 3. A pinch, `JSON serde`
@@ -81,26 +81,26 @@ hotpot-db is made from few, but time tasted ingredients. It is a new approach on
 ## Concepts
 
 #### Collection  
-In a technical sense a collection is just a table in SQLite, that stores data in a specific format. Each row is an `Entry` which consists of three columns: id, time_created, data. The data column holds each JSON object and the other columns are used as hotpot-db metadata.  
+In a technical sense, a collection is just a table in SQLite, that stores data in a specific format. Each row is an `Entry` which consists of three columns: id, time_created, data. The data column holds each JSON object and the other columns are used as hotpot-db metadata.  
 
-In theory a collection should house similar data to make it easier to manage, but hotpt-db doesnt care about schema so you can store any kind of object in a single collection.
+In theory, a collection should house similar data to make it easier to manage, but hotpot-db doesn't care about schema so you can store any kind of object in a single collection.
 
 #### Objects
 
-Each entry contains an object and the are the heart of hotpot-db. Objects are special because you can query their conents effeicently. 
+Each entry contains an object and the are the heart of hotpot-db. Objects are special because you can query their contents efficiently. 
 
 This is an advantage over storing JSON in other datastores since you don't have to read the full object to query the contents. hotpot-db wraps SQLite's json1 extension into an easy to use API. 
 
 
 ## Speed Estimates
 
-Objects allow us to store schemaless data and still search through it efficently. Query's on small dbs ~10MB run in <5ms and tested queires on larger DB's ~100MB run <500ms.
+Objects allow us to store schemaless data and still search through it efficiently. Query's on small dbs ~10MB run in <5ms and tested queries on larger DB's ~100MB run <500ms.
 
 ## Query Kinds
 
 In a hot pot you can only query in two different ways. You can check the contents of an array or the attribute/values of an object.
 
-hotpot-db offers the developer a simple QueryBuilder that allow you to conviently write and read your queries. 
+hotpot-db offers the developer a simple QueryBuilder that allows you to conveniently write and read your queries. 
 
 #### Querying Arrays
 ```rust
