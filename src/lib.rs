@@ -1,4 +1,6 @@
 use rusqlite::{params, Connection, NO_PARAMS};
+use serde::Serialize;
+use serde_json::json;
 use std::any::type_name;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -304,6 +306,15 @@ impl HotPot {
     }
 
     pub fn add_object_to_collection(&mut self, cname: &str, val: String) -> Result<bool, Error> {
+        let c = &self.collections.get(cname).unwrap();
+        let _did_insert = c.add_object(&self.conn, cname, val);
+        Ok(true)
+    }
+
+    pub fn insert<T: Serialize>(&mut self, cname: &str, svalue: &T) -> Result<bool, Error> {
+        // let json_to_store = serde_json::to_string(&person).unwrap();
+        let val: String = json!(svalue).to_string();
+
         let c = &self.collections.get(cname).unwrap();
         let _did_insert = c.add_object(&self.conn, cname, val);
         Ok(true)
