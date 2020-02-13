@@ -69,16 +69,6 @@ pub struct Index {
     pub collection: String,
     pub key: String,
     pub value: String,
-    // create index wr_country on wine_reviews (json_extract(data, '$.country'));
-    //
-    // sqlite> insert into a values (1, '{"hello":"world"}');
-    // sqlite> create index idx_a on a (json_extract(j, '$.hello'));
-    // sqlite> explain query plan select * from a where json_extract(j, '$.hello') = 'world';
-    // QUERY PLAN
-    // `--SEARCH TABLE a USING INDEX idx_a (<expr>=?)
-    // sqlite> explain query plan select * from a where json_extract(j, '$.foo') = 'world';
-    // QUERY PLAN
-    // `--SCAN TABLE a
 }
 
 #[derive(Debug)]
@@ -229,7 +219,6 @@ impl HotPot {
     }
 
     pub fn execute(&self, query: Query) -> Result<Vec<Entry>, Error> {
-        // pub fn execute(&self, query: Query) {
         let mut results = Vec::new();
         let c = &self
             .collections
@@ -313,7 +302,6 @@ impl HotPot {
                         .unwrap_or(Vec::new());
                 }
                 if !query.float_value.is_none() {
-                    // println!("{:?}", &query.float_value);
                     results = c
                         .query_object_with_key_value::<f32>(
                             &self.conn,
@@ -377,6 +365,9 @@ impl Collection {
         Ok(())
     }
 
+    // --DROP INDEX wr_country
+    // --CREATE INDEX wr_country ON wine_reviews (json_extract(data, '$.country'))
+    // --EXPLAIN QUERY PLAN SELECT * FROM wine_reviews WHERE json_extract(data, '$.country') = 'Italy'
     pub fn add_index(
         &self,
         conn: &Connection,
@@ -388,9 +379,10 @@ impl Collection {
             "CREATE INDEX {} ON {} (json_extract(data, '$.{}'))",
             index_name, collection_name, key
         ))?;
-        let res = stmt.execute(params![])?;
+        let _res = stmt.execute(params![])?;
         Ok(())
     }
+
     pub fn query_arrays_contains<T: std::fmt::Display>(
         &self,
         conn: &Connection,
@@ -398,40 +390,29 @@ impl Collection {
         comparison: &str,
         value: &T,
     ) -> rusqlite::Result<Vec<Entry>> {
-        match type_of(value) {
-            "&alloc::string::String" => {
-                let mut stmt = conn.prepare(&format!(
-                    "SELECT * from {}, json_each(data) WHERE json_each.value {} '{}'",
-                    cname, comparison, value
-                ))?;
-
-                let person_iter = stmt.query_map(params![], |row| {
-                    Ok(Entry {
-                        id: row.get(0).unwrap(),
-                        time_created: row.get(1).unwrap(),
-                        data: row.get(2).unwrap(),
-                    })
-                })?;
-                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-                Ok(results)
+        let query = match type_of(value) {
+            "&alloc::string::String" => {format!(
+                    "SELECT {}.id, time_created, data, from {}, json_each(data) WHERE json_each.value {} '{}'",
+                    cname, cname, comparison, value
+                )
             }
             _ => {
-                let mut stmt = conn.prepare(&format!(
-                    "SELECT * from {}, json_each(data) WHERE json_each.value {} {}",
-                    cname, comparison, value
-                ))?;
-
-                let person_iter = stmt.query_map(params![], |row| {
-                    Ok(Entry {
-                        id: row.get(0).unwrap(),
-                        time_created: row.get(1).unwrap(),
-                        data: row.get(2).unwrap(),
-                    })
-                })?;
-                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-                Ok(results)
+                format!(
+                    "SELECT {}.id, time_created, data, from {}, json_each(data) WHERE json_each.value {} {}",
+                    cname, cname, comparison, value
+                )
             }
-        }
+        };
+        let mut stmt = conn.prepare(&query)?;
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
     }
 
     pub fn query_object_with_key_value<T: std::fmt::Display>(
@@ -442,41 +423,29 @@ impl Collection {
         key: &str,
         value: &T,
     ) -> rusqlite::Result<Vec<Entry>> {
-        match type_of(value) {
+        let query = match type_of(value) {
             "&alloc::string::String" => {
-                let query = format!(
-                    "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} '{}'",
-                    cname, key, comparison, value
-                );
-                // println!("{}", query);
-                let mut stmt = conn.prepare(&query)?;
-                let person_iter = stmt.query_map(params![], |row| {
-                    Ok(Entry {
-                        id: row.get(0).unwrap(),
-                        time_created: row.get(1).unwrap(),
-                        data: row.get(2).unwrap(),
-                    })
-                })?;
-                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-                Ok(results)
+                format!(
+                    "SELECT {}.id, time_created, data FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} '{}'",
+                    cname, cname, key, comparison, value
+                )
             }
             _ => {
-                let query = format!(
-                    "SELECT * FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} {}",
-                    cname, key, comparison, value
-                );
-                // println!("{}", query);
-                let mut stmt = conn.prepare(&query)?;
-                let person_iter = stmt.query_map(params![], |row| {
-                    Ok(Entry {
-                        id: row.get(0).unwrap(),
-                        time_created: row.get(1).unwrap(),
-                        data: row.get(2).unwrap(),
-                    })
-                })?;
-                let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
-                Ok(results)
+                format!(
+                    "SELECT {}.id, time_created, data FROM {}, json_tree(data, '$.{}') WHERE json_tree.value {} {}",
+                    cname, cname, key, comparison, value
+                )
             }
-        }
+        };
+        let mut stmt = conn.prepare(&query)?;
+        let person_iter = stmt.query_map(params![], |row| {
+            Ok(Entry {
+                id: row.get(0).unwrap(),
+                time_created: row.get(1).unwrap(),
+                data: row.get(2).unwrap(),
+            })
+        })?;
+        let results: Vec<Entry> = person_iter.map(|data| data.unwrap()).collect();
+        Ok(results)
     }
 }
