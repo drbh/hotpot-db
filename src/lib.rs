@@ -4,6 +4,7 @@ use serde_json::json;
 use std::any::type_name;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct HotPot {
@@ -159,9 +160,13 @@ impl QueryBuilder {
 }
 
 impl HotPot {
-    pub fn new() -> HotPot {
+    pub fn new<P: AsRef<Path>>(path: P) -> HotPot {
+        let path = path.as_ref();
+        if !path.exists() {
+            panic!(format!("The path {:?} does not exist!", path))
+        }
         let mut hp = HotPot {
-            conn: Connection::open("database.hpdb").unwrap(),
+            conn: Connection::open(path.join("database.hpdb")).unwrap(),
             collections: HashMap::new(),
         };
         let collections = hp.list_collections();
