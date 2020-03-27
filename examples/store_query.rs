@@ -8,7 +8,7 @@ struct Person {
 }
 
 fn main() -> Result<(), hotpot_db::Error> {
-    let mut pot = HotPot::new();
+    let mut pot = HotPot::new(".");
 
     // lets make a new collection
     pot.create_collection("address_book")?;

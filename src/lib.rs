@@ -3,8 +3,8 @@ use serde::Serialize;
 use serde_json::json;
 use std::any::type_name;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct HotPot {
@@ -47,10 +47,15 @@ pub struct Query {
     pub collection: String,
     pub comparison: String,
     pub key: Option<String>,
-    pub string_value: Option<String>,
-    pub bool_value: Option<bool>,
-    pub float_value: Option<f32>,
-    pub int_value: Option<i32>,
+    pub value: Value,
+}
+
+#[derive(Debug, Clone)]
+pub enum Value {
+    Boolean(bool),
+    Float(f32),
+    Integer(i32),
+    String(String),
 }
 
 #[derive(Debug)]
@@ -59,10 +64,7 @@ pub struct QueryBuilder {
     pub collection: Option<String>,
     pub comparison: Option<String>,
     pub key: Option<String>,
-    pub string_value: Option<String>,
-    pub bool_value: Option<bool>,
-    pub float_value: Option<f32>,
-    pub int_value: Option<i32>,
+    pub value: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -98,10 +100,7 @@ impl QueryBuilder {
             collection: None,
             comparison: None,
             key: None,
-            string_value: None,
-            bool_value: None,
-            float_value: None,
-            int_value: None,
+            value: None,
         }
     }
 
@@ -121,22 +120,22 @@ impl QueryBuilder {
     }
 
     pub fn string(mut self, value: &str) -> QueryBuilder {
-        self.string_value = Some(String::from(value));
+        self.value = Some(Value::String(String::from(value)));
         self
     }
 
     pub fn bool(mut self, value: bool) -> QueryBuilder {
-        self.bool_value = Some(value.clone());
+        self.value = Some(Value::Boolean(value));
         self
     }
 
     pub fn float(mut self, value: f32) -> QueryBuilder {
-        self.float_value = Some(value.clone());
+        self.value = Some(Value::Float(value));
         self
     }
 
     pub fn int(mut self, value: i32) -> QueryBuilder {
-        self.int_value = Some(value.clone());
+        self.value = Some(Value::Integer(value));
         self
     }
 
@@ -151,10 +150,7 @@ impl QueryBuilder {
             collection: self.collection.unwrap(),
             comparison: self.comparison.unwrap(),
             key: self.key,
-            string_value: self.string_value,
-            bool_value: self.bool_value,
-            float_value: self.float_value,
-            int_value: self.int_value,
+            value: self.value.unwrap(),
         }
     }
 }
@@ -184,6 +180,9 @@ impl HotPot {
             Err(_) => (),
         }
         hp
+    }
+    pub fn close(self) {
+        self.conn.close();
     }
 
     pub fn list_collections(&mut self) -> rusqlite::Result<Vec<String>> {
@@ -229,96 +228,80 @@ impl HotPot {
             .collections
             .get(&query.collection)
             .expect("collection does not exist");
-        match query.query_type {
-            QueryKind::Contains => {
-                if !query.string_value.is_none() {
-                    results = c
-                        .query_arrays_contains::<String>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.string_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.int_value.is_none() {
-                    results = c
-                        .query_arrays_contains::<i32>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.int_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.bool_value.is_none() {
-                    results = c
-                        .query_arrays_contains::<bool>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.bool_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.float_value.is_none() {
-                    results = c
-                        .query_arrays_contains::<f32>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.float_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-            }
-            QueryKind::Object => {
-                if !query.string_value.is_none() {
-                    results = c
-                        .query_object_with_key_value::<String>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.key.clone().unwrap(),
-                            &query.string_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.int_value.is_none() {
-                    results = c
-                        .query_object_with_key_value::<i32>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.key.clone().unwrap(),
-                            &query.int_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.bool_value.is_none() {
-                    results = c
-                        .query_object_with_key_value::<bool>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.key.clone().unwrap(),
-                            &query.bool_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-                if !query.float_value.is_none() {
-                    results = c
-                        .query_object_with_key_value::<f32>(
-                            &self.conn,
-                            &query.collection,
-                            &query.comparison,
-                            &query.key.clone().unwrap(),
-                            &query.float_value.unwrap(),
-                        )
-                        .unwrap_or(Vec::new());
-                }
-            }
-        }
+        results = match query.query_type {
+            QueryKind::Contains => match query.value {
+                Value::String(val) => c
+                    .query_arrays_contains::<String>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Boolean(val) => c
+                    .query_arrays_contains::<bool>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Float(val) => c
+                    .query_arrays_contains::<f32>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Integer(val) => c
+                    .query_arrays_contains::<i32>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+            },
+            QueryKind::Object => match query.value {
+                Value::String(val) => c
+                    .query_object_with_key_value::<String>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &query.key.clone().unwrap(),
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Boolean(val) => c
+                    .query_object_with_key_value::<bool>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &query.key.clone().unwrap(),
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Float(val) => c
+                    .query_object_with_key_value::<f32>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &query.key.clone().unwrap(),
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+                Value::Integer(val) => c
+                    .query_object_with_key_value::<i32>(
+                        &self.conn,
+                        &query.collection,
+                        &query.comparison,
+                        &query.key.clone().unwrap(),
+                        &val,
+                    )
+                    .unwrap_or(Vec::new()),
+            },
+        };
         Ok(results)
     }
 
@@ -346,6 +329,20 @@ impl HotPot {
         let _did_insert = c.add_object(&self.conn, cname, val);
         Ok(true)
     }
+
+    pub fn upsert_at_index<T: Serialize>(
+        &mut self,
+        cname: &str,
+        index: usize,
+        svalue: &T,
+    ) -> Result<bool, Error> {
+        // let json_to_store = serde_json::to_string(&person).unwrap();
+        let val: String = json!(svalue).to_string();
+
+        let c = &self.collections.get(cname).unwrap();
+        let _did_insert = c.add_object_at_index(&self.conn, cname, index, val);
+        Ok(true)
+    }
 }
 
 impl Collection {
@@ -364,6 +361,27 @@ impl Collection {
                 "INSERT INTO {} (time_created, data)
                   VALUES (?1, ?2)",
                 cname
+            ),
+            params![me.time_created, me.data.to_string()],
+        )?;
+        Ok(())
+    }
+    pub fn add_object_at_index(
+        &self,
+        conn: &Connection,
+        cname: &str,
+        hotpot_id_for_entry: usize,
+        value: String,
+    ) -> rusqlite::Result<()> {
+        let me = NewEntry {
+            time_created: get_ms_time(),
+            data: value,
+        };
+        conn.execute(
+            &format!(
+                "INSERT OR REPLACE INTO {} (id, time_created, data)
+                  VALUES ({}, ?1, ?2)",
+                cname, hotpot_id_for_entry
             ),
             params![me.time_created, me.data.to_string()],
         )?;

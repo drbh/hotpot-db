@@ -36,7 +36,8 @@ struct Person {
 }
 
 fn main() -> Result<(), hotpot_db::Error> {
-    let mut pot = HotPot::new();
+    // must pass a path to init
+    let mut pot = HotPot::new(".");
 
     // lets make a new collection
     pot.create_collection("address_book")?;
@@ -122,3 +123,12 @@ let query = QueryBuilder::new()
     .string("david holtz")
     .finish();
 ```
+
+### Changelogs
+
+- March 24th, PR to allow user to specify location of the database, thanks @juzi5201314 for the clean code https://github.com/drbh/hotpot-db/pull/3
+
+- March 25th allow user to overwrite entries at specific index with new API `upsert_at_index`
+
+- March 26th change Option to enum. Avoid the possibility of unexpected results from overloaded input. thanks @HiruNya for pointing this bug out https://github.com/drbh/hotpot-db/issues/2
+
